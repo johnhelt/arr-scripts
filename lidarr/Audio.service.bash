@@ -278,7 +278,8 @@ FailedDownloadCleaner() {
     # Add your logic for each file inside this loop
     # For example, you can use variables like "$file" to refer to the current file
 
-done
+	done
+}
 
 TidalClientSetup () {
 	log "TIDAL :: Verifying tidal-dl configuration"
