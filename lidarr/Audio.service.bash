@@ -27,6 +27,8 @@ verifyConfig () {
   	failedDownloadAttemptThreshold="6"
   fi
 
+  downloadTryMax=$((failedDownloadAttemptThreshold + 1))
+
   if [ -z "$tidalClientTestDownloadId" ]; then
   	tidalClientTestDownloadId="166356219"
   fi
@@ -41,8 +43,9 @@ verifyConfig () {
 
 Configuration () {
 	sleepTimer=0.5
-	tidaldlFail=0
-	deemixFail=0
+	failedClient=0
+	failedDownloads=0
+
 	log "-----------------------------------------------------------------------------"
 	log " |~) _ ._  _| _ ._ _ |\ |o._  o _ |~|_|_|"
 	log " |~\(_|| |(_|(_)| | || \||| |_|(_||~| | |<"
@@ -250,6 +253,33 @@ NotFoundFolderCleaner () {
 	fi
 }
 
+
+FailedDownloadCleaner() {
+	
+	folder_path="/config/extended/logs/downloaded/failed"
+	
+	if [ ! -d "$folder_path" ]; then
+    	echo "Folder does not exist: $folder_path"
+    	exit 1
+	fi
+
+	now=$(date +%s)
+
+	find "$folder_path" -type f -print0 | while IFS= read -r -d $'\0' file; do
+    # Perform your logic here		
+		fileModified = $(date -r $file %s)
+		timeSinceModifiedSeconds = $((now-fileModified))
+		timeSinceModifiedDays=$(echo "scale=5; $timeSinceModifiedSeconds / (60 * 60 * 24)" | bc)
+
+		if [ $timeSinceModifiedDays -ge $retryFailedDownload ]; then
+			rm $file
+		fi;
+
+    # Add your logic for each file inside this loop
+    # For example, you can use variables like "$file" to refer to the current file
+
+done
+
 TidalClientSetup () {
 	log "TIDAL :: Verifying tidal-dl configuration"
 	touch /config/xdg/.tidal-dl.log
@@ -299,6 +329,8 @@ TidalClientSetup () {
 	TidaldlStatusCheck
 	#log "TIDAL :: Upgrade tidal-dl to newer version..."
 	#pip3 install tidal-dl==2022.07.06.1 --no-cache-dir &>/dev/null
+
+	TidalClientTest
 	
 }
 
@@ -349,6 +381,62 @@ TidalClientTest () {
 	fi
 }
 
+CallDownloadClient() {
+
+	local albumId="$1"
+	local client="$2"
+	
+	if [ $client == "DEEZER" ]; then
+		if [ -z $arlToken ] || [ ]; then
+			DownloadClientFreyr $albumId			
+		else			
+			deemix -b $deemixQuality -p "$audioPath"/incomplete "https://www.deezer.com/album/$albumId" 2>&1 | tee -a "/config/logs/$logFileName"			
+		fi
+
+		if [ -d "/tmp/deemix-imgs" ]; then
+			rm -rf /tmp/deemix-imgs
+		fi
+
+	elif [ $client == "TIDAL"]; then
+		tidal-dl -q $tidalQuality -o "$audioPath/incomplete" -l "$albumId"  2>&1 | tee -a "/config/logs/$logFileName"		
+	elif [ $client == "FREYR"]; then  # Fallback to Freyr if clients failed too many times	
+		DownloadClientFreyr $albumId
+	fi;
+
+	CheckDownloadClient "$client"
+
+}
+
+CheckDownloadClient() {
+	
+	local client="$1"
+
+	clientTestDlCount=$(find "$audioPath"/incomplete/ -type f -regex ".*/.*\.\(flac\|opus\|m4a\|mp3\)" | wc -l)
+
+	if [ $clientTestDlCount -le 0 ]; then
+
+		#  exit if no test download could be made
+		
+		if [ $client == "DEEZER" ]; then
+			DeezerClientTest
+		elif [ $client == "TIDAL" ]; then
+			TidalClientTest
+		fi;
+		
+		# Add +1 to failed attempts
+		failedDownloads=$(( $failedDownloads + 1))		
+	else
+		# Reset for successful download		
+		failedDownloads=0
+	fi
+
+	if [ $failedDownloads -ge $failedDownloadAttemptThreshold ]; then  # Fail faster if last file has failed already more than threshold.
+		failedClient=1  # Set failed client status
+		downloadTry=$(( $downloadTry + 1))		
+	fi;
+		
+}
+
 DownloadProcess () {
 
 	# Required Input Data
@@ -357,6 +445,9 @@ DownloadProcess () {
 	# $3 = Album Year that matches Album ID Metadata
 	# $4 = Album Title that matches Album ID Metadata
 	# $5 = Expected Track Count
+
+	failedClient=0  # re-enable client
+	client="$2"
 
 	# Create Required Directories	
 	if [ ! -d "$audioPath/incomplete" ]; then
@@ -405,25 +496,27 @@ DownloadProcess () {
 
 	downloadedAlbumTitleClean="$(echo "$4" | sed -e "s%[^[:alpha:][:digit:]._' ]% %g" -e "s/  */ /g" | sed 's/^[.]*//' | sed  's/[.]*$//g' | sed  's/^ *//g' | sed 's/ *$//g')"
     	
-	if find "$audioPath"/complete -type d -iname "$lidarrArtistNameSanitized-$downloadedAlbumTitleClean ($3)-*-$1-$2" | read; then
+	if find "$audioPath"/complete -type d -iname "$lidarrArtistNameSanitized-$downloadedAlbumTitleClean ($3)-*-$1-$client" | read; then
 		log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: ERROR :: Previously Downloaded..."
 		return
     fi
 
 	# check for log file
-	if [ "$2" == "DEEZER" ]; then
+	if [ "$client" == "DEEZER" ]; then
 		if [ -f /config/extended/logs/downloaded/deezer/$1 ]; then
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: ERROR :: Previously Downloaded ($1)..."
-			return
+			return			
 		fi
+		
 		if [ -f /config/extended/logs/downloaded/failed/deezer/$1 ]; then
+			
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: ERROR :: Previously Attempted Download ($1)..."
 			return
 		fi
 	fi
 
 	# check for log file
-	if [ "$2" == "TIDAL" ]; then
+	if [ "$client" == "TIDAL" ]; then
 		if [ -f /config/extended/logs/downloaded/tidal/$1 ]; then
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: ERROR :: Previously Downloaded ($1)..."
 			return
@@ -433,13 +526,10 @@ DownloadProcess () {
 			return
 		fi
 	fi
-
-	
 	
 	downloadTry=0
 	until false
-	do	
-		downloadTry=$(( $downloadTry + 1 ))
+	do			
 		if [ -f /temp-download ]; then
 			rm /temp-download
 			sleep 0.1
@@ -448,76 +538,12 @@ DownloadProcess () {
 		sleep 0.1
 
 		log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Download Attempt number $downloadTry"
-		if [ "$2" == "DEEZER" ]; then
-			
-			if [ -z $arlToken ]; then
-				DownloadClientFreyr $1
-			else
-				deemix -b $deemixQuality -p "$audioPath"/incomplete "https://www.deezer.com/album/$1" 2>&1 | tee -a "/config/logs/$logFileName"
-			fi
-			
-			if [ -d "/tmp/deemix-imgs" ]; then
-				rm -rf /tmp/deemix-imgs
-			fi
 
-			# Verify Client Works...
-			clientTestDlCount=$(find "$audioPath"/incomplete/ -type f -regex ".*/.*\.\(flac\|opus\|m4a\|mp3\)" | wc -l)
-			if [ $clientTestDlCount -le 0 ]; then
-				# Add +1 to failed attempts
-				deemixFail=$(( $deemixFail + 1))
-			else
-				# Reset for successful download
-				deemixFail=0
-			fi
-			
-			# If download failes X times, exit with error...
-			if [ $deemixFail -eq $failedDownloadAttemptThreshold ]; then
-				if [ -z $arlToken ]; then
-    					rm -rf "$audioPath"/incomplete/*
-					log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: All $failedDownloadAttemptThreshold Download Attempts failed, skipping..."
-     				else
-	    				DeezerClientTest
-	       				if [ "$deezerClientTest" == "success" ]; then
-		   				log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType ::  All $failedDownloadAttemptThreshold Download Attempts failed, skipping..."
-	 					deemixFail=0
-					fi
-				fi
-			fi
-		fi
+		CallDownloadClient "$1" "$client"
 
-		if [ "$2" == "DEEZER" ]; then
-  			if [ $deemixFail -eq $failedDownloadAttemptThreshold ]; then
-				if [ -z $arlToken ]; then
-					DownloadClientFreyr $1
-				else
-					deemix -b $deemixQuality -p "$audioPath"/incomplete "https://www.deezer.com/album/$1" 2>&1 | tee -a "/config/logs/$logFileName"
-				fi
-    			fi
-       		fi
-
-		if [ "$2" == "TIDAL" ]; then
-			TidaldlStatusCheck
-
-			tidal-dl -q $tidalQuality -o "$audioPath/incomplete" -l "$1"  2>&1 | tee -a "/config/logs/$logFileName"
-
-			# Verify Client Works...
-			clientTestDlCount=$(find "$audioPath"/incomplete/ -type f -regex ".*/.*\.\(flac\|opus\|m4a\|mp3\)" | wc -l)
-			if [ $clientTestDlCount -le 0 ]; then
-				# Add +1 to failed attempts
-				tidaldlFail=$(( $tidaldlFail + 1))
-			else
-				# Reset for successful download
-				tidaldlFail=0
-			fi
-			
-			# If download failes X times, exit with error...
-			if [ $tidaldlFail -eq $failedDownloadAttemptThreshold ]; then
-   				TidalClientTest
-       				if [ "$tidalClientTest" == "success" ]; then
-	   				log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: All $failedDownloadAttemptThreshold Download Attempts failed, skipping..."
-				fi
-			fi
-		fi
+		if [ $failedClient -eq 1]; then
+			client="FREYR"
+		fi;
 
 		find "$audioPath/incomplete" -type f -iname "*.flac" -newer "/temp-download" -print0 | while IFS= read -r -d '' file; do
 			audioFlacVerification "$file"
@@ -538,12 +564,12 @@ DownloadProcess () {
 			completedVerification="true"
 		fi
 
-		if [ "$completedVerification" == "true" ]; then
+		if [ "$completedVerification" == "true" ]; then			
 			break
 		elif [ "$downloadTry" == "2" ]; then
 			if [ -d "$audioPath"/incomplete ]; then
 				rm -rf "$audioPath"/incomplete/*
-			fi
+			fi			
 			break
 		else
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Retry Download in 1 second fix errors..."
@@ -559,7 +585,7 @@ DownloadProcess () {
 	downloadCount=$(find "$audioPath"/incomplete/ -type f -regex ".*/.*\.\(flac\|m4a\|mp3\)" | wc -l)
 	if [ "$downloadCount" -gt "0" ]; then
 		# Check download for required quality (checks based on file extension)
-		DownloadQualityCheck "$audioPath/incomplete" "$2"
+		DownloadQualityCheck "$audioPath/incomplete" "$client"
 	fi
 	
 	downloadCount=$(find "$audioPath"/incomplete/ -type f -regex ".*/.*\.\(flac\|m4a\|mp3\)" | wc -l)
@@ -568,10 +594,10 @@ DownloadProcess () {
 		log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Logging $1 as failed download..."
 
 
-		if [ "$2" == "DEEZER" ]; then
+		if [ "$client" == "DEEZER" ]; then
 			touch /config/extended/logs/downloaded/failed/deezer/$1
 		fi
-		if [ "$2" == "TIDAL" ]; then
+		if [ "$client" == "TIDAL" ]; then
 			touch /config/extended/logs/downloaded/failed/tidal/$1
 		fi
 		return
@@ -579,10 +605,10 @@ DownloadProcess () {
 
 	# Log Completed Download
 	log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Logging $1 as successfully downloaded..."
-	if [ "$2" == "DEEZER" ]; then
+	if [ "$client" == "DEEZER" ]; then
 		touch /config/extended/logs/downloaded/deezer/$1
 	fi
-	if [ "$2" == "TIDAL" ]; then
+	if [ "$client" == "TIDAL" ]; then
 		touch /config/extended/logs/downloaded/tidal/$1
 	fi
 
@@ -915,6 +941,8 @@ DeemixClientSetup () {
 
 	#log "DEEZER :: Upgrade deemix to the latest..."
 	#pip install deemix --upgrade &>/dev/null
+		
+	DeezerClientTest
 
 }
 
@@ -1830,13 +1858,15 @@ AudioProcess () {
   
   # Perform NotFound Folder Cleanup process
   NotFoundFolderCleaner
+
+  FailedDownloadCleaner
   
   LidarrRootFolderCheck
   
   DownloadFormat
   
   if [ "$dlClientSource" == "deezer" ] || [ "$dlClientSource" == "both" ]; then
-  	DeemixClientSetup
+  	DeemixClientSetup	
   fi
   
   if [ "$dlClientSource" == "tidal" ] || [ "$dlClientSource" == "both" ]; then
