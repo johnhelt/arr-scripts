@@ -67,7 +67,7 @@ curl "$GITURL/lidarr/TidalVideoDownloader.bash" -o /custom-services.d/TidalVideo
 echo "Done"
 
 echo "Download Audio service..."
-curl "$GITURL/Audio.service.bash" -o /custom-services.d/Audio
+curl "$GITURL/lidarr/Audio.service.bash" -o /custom-services.d/Audio
 echo "Done"
 
 echo "Download AutoArtistAdder service..."
