@@ -1,4 +1,0 @@
-#!/bin/bash
-giturlbase=https://raw.githubusercontent.com/johnhelt/arr-scripts/
-branch=fallback-client
-giturl="$giturlbase/$branch$"

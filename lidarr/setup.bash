@@ -1,5 +1,4 @@
 #!/usr/bin/with-contenv bash
-source .repo
 SMA_PATH="/usr/local/sma"
 
 echo "*** install packages ***" && \
@@ -52,87 +51,87 @@ pip3 install -r ${SMA_PATH}/setup/requirements.txt
 
 mkdir -p /custom-services.d
 echo "Download QueueCleaner service..."
-curl "$giturl/universal/services/QueueCleaner" -o /custom-services.d/QueueCleaner
+curl "$GITURL/universal/services/QueueCleaner" -o /custom-services.d/QueueCleaner
 echo "Done"
 
 echo "Download AutoConfig service..."
-curl "$giturl/lidarr/AutoConfig.service.bash" -o /custom-services.d/AutoConfig
+curl "$GITURL/lidarr/AutoConfig.service.bash" -o /custom-services.d/AutoConfig
 echo "Done"
 
 echo "Download Video service..."
-curl "$giturl/lidarr/Video.service.bash" -o /custom-services.d/Video
+curl "$GITURL/lidarr/Video.service.bash" -o /custom-services.d/Video
 echo "Done"
 
 echo "Download Tidal Video Downloader service..."
-curl "$giturl/lidarr/TidalVideoDownloader.bash" -o /custom-services.d/TidalVideoDownloader
+curl "$GITURL/lidarr/TidalVideoDownloader.bash" -o /custom-services.d/TidalVideoDownloader
 echo "Done"
 
 echo "Download Audio service..."
-curl "$giturl/Audio.service.bash" -o /custom-services.d/Audio
+curl "$GITURL/Audio.service.bash" -o /custom-services.d/Audio
 echo "Done"
 
 echo "Download AutoArtistAdder service..."
-curl "$giturl/lidarr/AutoArtistAdder.bash" -o /custom-services.d/AutoArtistAdder
+curl "$GITURL/lidarr/AutoArtistAdder.bash" -o /custom-services.d/AutoArtistAdder
 echo "Done"
 
 echo "Download UnmappedFilesCleaner service..."
-curl "$giturl/lidarr/UnmappedFilesCleaner.bash" -o /custom-services.d/UnmappedFilesCleaner
+curl "$GITURL/lidarr/UnmappedFilesCleaner.bash" -o /custom-services.d/UnmappedFilesCleaner
 echo "Done"
 
 mkdir -p /config/extended
 echo "Download Script Functions..."
-curl "$giturl/universal/functions.bash" -o /config/extended/functions
+curl "$GITURL/universal/functions.bash" -o /config/extended/functions
 echo "Done"
 
 echo "Download PlexNotify script..."
-curl "$giturl/lidarr/PlexNotify.bash" -o /config/extended/PlexNotify.bash 
+curl "$GITURL/lidarr/PlexNotify.bash" -o /config/extended/PlexNotify.bash 
 echo "Done"
 
 echo "Download SMA config..."
-curl "$giturl/lidarr/sma.ini" -o /config/extended/sma.ini 
+curl "$GITURL/lidarr/sma.ini" -o /config/extended/sma.ini 
 echo "Done"
 
 if [ ! -f /config/extended/beets-config.yaml ]; then
 	echo "Download Beets config..."
-	curl "$giturl/lidarr/beets-config.yaml" -o /config/extended/beets-config.yaml
+	curl "$GITURL/lidarr/beets-config.yaml" -o /config/extended/beets-config.yaml
 	echo "Done"
 fi
 
 if [ ! -f /config/extended/beets-config-lidarr.yaml ]; then
 	echo "Download Beets lidarr config..."
-	curl "$giturl/lidarr/beets-config-lidarr.yaml" -o /config/extended/beets-config-lidarr.yaml
+	curl "$GITURL/lidarr/beets-config-lidarr.yaml" -o /config/extended/beets-config-lidarr.yaml
 	echo "Done"
 fi
 
 echo "Download Deemix config..."
-curl "$giturl/lidarr/deemix_config.json" -o /config/extended/deemix_config.json
+curl "$GITURL/lidarr/deemix_config.json" -o /config/extended/deemix_config.json
 echo "Done"
 
 echo "Download Tidal config..."
-curl "$giturl/lidarr/tidal-dl.json" -o /config/extended/tidal-dl.json
+curl "$GITURL/lidarr/tidal-dl.json" -o /config/extended/tidal-dl.json
 echo "Done"
 
 echo "Download LyricExtractor script..."
-curl "$giturl/lidarr/LyricExtractor.bash" -o /config/extended/LyricExtractor.bash
+curl "$GITURL/lidarr/LyricExtractor.bash" -o /config/extended/LyricExtractor.bash
 echo "Done"
 
 echo "Download ArtworkExtractor script..."
-curl "$giturl/lidarr/ArtworkExtractor.bash" -o /config/extended/ArtworkExtractor.bash
+curl "$GITURL/lidarr/ArtworkExtractor.bash" -o /config/extended/ArtworkExtractor.bash
 echo "Done"
 
 echo "Download Beets Tagger script..."
-curl "$giturl/lidarr/BeetsTagger.bash" -o /config/extended/BeetsTagger.bash
+curl "$GITURL/lidarr/BeetsTagger.bash" -o /config/extended/BeetsTagger.bash
 echo "Done"
 
 if [ ! -f /config/extended/beets-genre-whitelist.txt ]; then
 	echo "Download beets-genre-whitelist.txt..."
-	curl "$giturl/lidarr/beets-genre-whitelist.txt" -o /config/extended/beets-genre-whitelist.txt
+	curl "$GITURL/lidarr/beets-genre-whitelist.txt" -o /config/extended/beets-genre-whitelist.txt
 	echo "Done"
 fi
 
 if [ ! -f /config/extended.conf ]; then
 	echo "Download Extended config..."
-	curl "$giturl/lidarr/extended.conf" -o /config/extended.conf
+	curl "$GITURL/lidarr/extended.conf" -o /config/extended.conf
 	chmod 777 /config/extended.conf
 	echo "Done"
 fi
