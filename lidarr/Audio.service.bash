@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-scriptVersion="2.24"
+scriptVersion="2.3"
 scriptName="Audio"
 
 ### Import Settings
@@ -1452,6 +1452,8 @@ ArtistDeezerSearch () {
 		    log "$1 :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Artist Search :: Deezer :: $type :: $lidarrReleaseTitle :: $lidarrAlbumReleaseTitleClean vs $deezerAlbumTitleClean :: Not a match..."
 			continue
 		fi
+
+		log "$1 :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Artist Search :: Deezer :: $type :: $lidarrReleaseTitle :: $lidarrAlbumReleaseTitleClean vs $deezerAlbumTitleClean :: Possible match..."
 		GetDeezerAlbumInfo "$deezerAlbumID"
 		deezerAlbumData="$(cat "/config/extended/cache/deezer/$deezerAlbumID.json")"
 		deezerAlbumTrackCount="$(echo "$deezerAlbumData" | jq -r .nb_tracks)"
@@ -1463,11 +1465,13 @@ ArtistDeezerSearch () {
 
 		# Reject release if greater than the max track count
 		if [ "$deezerAlbumTrackCount" -gt "$lidarrAlbumReleasesMaxTrackCount" ]; then
+			log "$1 :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Artist Search :: Deezer :: $type :: $lidarrReleaseTitle :: $lidarrAlbumReleaseTitleClean vs $deezerAlbumTitleClean :: Too many tracks ($deezerAlbumTrackCount vs $lidarrAlbumReleasesMaxTrackCount)"
 			continue
 		fi
 
 		# Reject release if less than the min track count
 		if [ "$deezerAlbumTrackCount" -lt "$lidarrAlbumReleasesMinTrackCount" ]; then
+			log "$1 :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Artist Search :: Deezer :: $type :: $lidarrReleaseTitle :: $lidarrAlbumReleaseTitleClean vs $deezerAlbumTitleClean :: Too few tracks ($deezerAlbumTrackCount vs $lidarrAlbumReleasesMinTrackCount)"
 			continue
 		fi
 		
