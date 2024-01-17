@@ -398,9 +398,9 @@ CallDownloadClient() {
 			rm -rf /tmp/deemix-imgs
 		fi
 
-	elif [ $client == "TIDAL"]; then
+	elif [ $client == "TIDAL" ]; then
 		tidal-dl -q $tidalQuality -o "$audioPath/incomplete" -l "$albumId"  2>&1 | tee -a "/config/logs/$logFileName"		
-	elif [ $client == "FREYR"]; then  # Fallback to Freyr if clients failed too many times	
+	elif [ $client == "FREYR" ]; then  # Fallback to Freyr if clients failed too many times	
 		DownloadClientFreyr $albumId
 	fi;
 
