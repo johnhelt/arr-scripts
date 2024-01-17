@@ -433,7 +433,7 @@ CheckDownloadClient() {
 
 	if [ $failedDownloads -ge $failedDownloadAttemptThreshold ]; then  # Fail faster if last file has failed already more than threshold.
 		failedClient=1  # Set failed client status
-		downloadTry=$(( $downloadTry + 1))		
+				
 	fi;
 		
 }
@@ -530,7 +530,8 @@ DownloadProcess () {
 	
 	downloadTry=0
 	until false
-	do			
+	do
+		downloadTry=$(( $downloadTry + 1))			
 		if [ -f /temp-download ]; then
 			rm /temp-download
 			sleep 0.1
@@ -542,7 +543,7 @@ DownloadProcess () {
 
 		CallDownloadClient "$1" "$client"
 
-		if [ $failedClient -eq 1 ]; then
+		if [ "$failedClient" -eq 1 ]; then
 			client="FREYR"
 		fi;
 
@@ -560,6 +561,7 @@ DownloadProcess () {
 		if [ "$downloadCount" -ne "$5" ]; then
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: ERROR :: download failed, missing tracks..."
 			completedVerification="false"
+			client="FREYR"			
 		else
 			log "$page :: $wantedAlbumListSource :: $processNumber of $wantedListAlbumTotal :: $lidarrArtistName :: $lidarrAlbumTitle :: $lidarrAlbumType :: Success"
 			completedVerification="true"
