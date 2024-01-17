@@ -149,7 +149,7 @@ Configuration () {
 		log "Beets Tagging Disabled"
 	fi
 
- 	log "Failed Download Attempt Theshold: $failedDownloadAttemptThreshold"
+ 	log "Failed Download Attempt Threshold: $failedDownloadAttemptThreshold"
 	
 }
 
@@ -542,7 +542,7 @@ DownloadProcess () {
 
 		CallDownloadClient "$1" "$client"
 
-		if [ $failedClient -eq 1]; then
+		if [ $failedClient -eq 1 ]; then
 			client="FREYR"
 		fi;
 
