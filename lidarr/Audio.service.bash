@@ -154,7 +154,7 @@ Configuration () {
 }
 
 DownloadClientFreyr () {
-	su -s /bin/bash -c 'freyr --no-bar --no-net-check -d "$1"/incomplete deezer:album:$2" 2>&1 | tee -a "/config/logs/$3"' 1000 -- "$audioPath" "$1" "$logFileName"
+	su -s /bin/bash -c 'freyr --no-bar --no-net-check -d "$1"/incomplete deezer:album:$2" 2>&1 | tee -a "/config/logs/$3"' abc -- "$audioPath" "$1" "$logFileName"
  	# Resolve issue 94
  	if [ -d /root/.cache/FreyrCLI ]; then
   		rm -rf  /root/.cache/FreyrCLI/*
